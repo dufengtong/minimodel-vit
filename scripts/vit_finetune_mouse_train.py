@@ -12,7 +12,7 @@ def main():
     mouse_ids = [3]
     model_name = "facebook/dinov3-vits16-pretrain-lvd1689m"
     token_type = "patch"
-    extract_layers_list = [[3]]
+    extract_layers_list = [[2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12]]
 
     n_blocks_to_unfreeze = 2
     max_epochs = 100
