@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModel
-from minimodel.model_builder import Readout
+from .model_builder import Readout
 
 HF_TOKEN = ""
 
