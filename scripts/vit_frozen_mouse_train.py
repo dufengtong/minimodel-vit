@@ -12,7 +12,7 @@ def main():
     mouse_ids      = [3]   # which mice to train
     model_name     = 'facebook/dinov3-vits16-pretrain-lvd1689m'
     token_type     = 'patch'
-    extract_layers = [6]
+    extract_layers = [7]
     max_epochs     = 200
     patience       = 5
     batch_size     = 64
@@ -23,7 +23,7 @@ def main():
     weight_path    = '../notebooks_vit/checkpoints/vit_frozen'
     hf_token       = os.getenv("HF_TOKEN")                                 # <-- fill in your HuggingFace token
 
-    extract_layers_str = ' '.join(str(l) for l in extract_layers)
+    
 
     for mouse_id in mouse_ids:
         output_save_path = f'outputs/vit_frozen/{mouse_names[mouse_id]}'
@@ -31,29 +31,32 @@ def main():
 
         prefix = f'vit_frozen_{mouse_names[mouse_id]}_seed{seed}'
 
-        bsub_cmd = (
-            f'bsub -n 2 -q gpu_a100 -gpu "num=1" '
-            f'-J {prefix} '
-            f'-o {output_save_path}/{prefix}.out '
-            f'-e {output_save_path}/{prefix}.err '
-            f'"bash vit_frozen_mouse_script.sh '
-            f'{mouse_id} '
-            f'\\"{model_name}\\" '
-            f'{token_type} '
-            f'\\"{extract_layers_str}\\" '
-            f'{max_epochs} '
-            f'{patience} '
-            f'{batch_size} '
-            f'{lr} '
-            f'{l2_readout} '
-            f'{seed} '
-            f'\\"{data_path}\\" '
-            f'\\"{weight_path}\\" '
-            f'\\"{hf_token}\\"'
-            f'"'
-        )
-        print(bsub_cmd)
-        os.system(bsub_cmd)
+        for extract_layer in extract_layers:
+            extract_layer = [extract_layer]  # ensure it's a list for the command-line argument
+            extract_layers_str = ' '.join(str(l) for l in extract_layer)
+            bsub_cmd = (
+                f'bsub -n 2 -q gpu_h100 -gpu "num=1" '
+                f'-J {prefix} '
+                f'-o {output_save_path}/{prefix}.out '
+                f'-e {output_save_path}/{prefix}.err '
+                f'"bash vit_frozen_mouse_script.sh '
+                f'{mouse_id} '
+                f'\\"{model_name}\\" '
+                f'{token_type} '
+                f'\\"{extract_layers_str}\\" '
+                f'{max_epochs} '
+                f'{patience} '
+                f'{batch_size} '
+                f'{lr} '
+                f'{l2_readout} '
+                f'{seed} '
+                f'\\"{data_path}\\" '
+                f'\\"{weight_path}\\" '
+                f'\\"{hf_token}\\"'
+                f'"'
+            )
+            print(bsub_cmd)
+            os.system(bsub_cmd)
 
 
 if __name__ == '__main__':
