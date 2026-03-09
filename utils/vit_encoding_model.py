@@ -66,6 +66,7 @@ def make_model_name(mouse_name, exp_date, model_name, token_type, extract_layers
         model_name:     HuggingFace model ID
         token_type:     'patch' or 'cls'
         extract_layers: None (last layer) or list of ints, e.g. [8, 9, 10, 11]
+        finetune:        True if this is a fine-tuned model, False otherwise
     """
     short = _model_shortname(model_name)
     if extract_layers is None:
@@ -177,27 +178,40 @@ class ViTCore(nn.Module):
         self.freeze = True
 
     def unfreeze_last_n_blocks(self, n):
-        """Unfreeze the last n transformer blocks + final layernorm for fine-tuning."""
-        for param in self.backbone.parameters():
-            param.requires_grad = False
+        """
+        Treat embeddings as stage 0, then transformer blocks as stage 1..N.
+        Unfreeze the last n stages + final layernorm.
+        """
+        for p in self.backbone.parameters():
+            p.requires_grad = False
 
-        encoder_layers = self.backbone.encoder.layer
-        total = len(encoder_layers)
+        stages = []
+
+        if hasattr(self.backbone, "embeddings"):
+            stages.append(self.backbone.embeddings)
+
+        encoder_layers = list(self.backbone.layer)
+        stages.extend(encoder_layers)
+        print(f"Total stages (including embeddings): {len(stages)}")
+
+        total = len(stages)
         n = min(n, total)
 
-        for layer in encoder_layers[total - n:]:
-            for param in layer.parameters():
-                param.requires_grad = True
+        for module in stages[total - n:]:
+            for p in module.parameters():
+                p.requires_grad = True
 
-        if hasattr(self.backbone, 'layernorm'):
-            for param in self.backbone.layernorm.parameters():
-                param.requires_grad = True
+        if hasattr(self.backbone, "layernorm"):
+            for p in self.backbone.layernorm.parameters():
+                p.requires_grad = True
 
         self.freeze = False
-        n_trainable = sum(p.numel() for p in self.backbone.parameters() if p.requires_grad)
-        print(f"Unfroze last {n}/{total} ViT blocks ({n_trainable:,} backbone params trainable)")
 
-    # ------------------------------------------------------------------
+        n_trainable = sum(
+            p.numel() for p in self.backbone.parameters() if p.requires_grad
+        )
+        print(f"Unfroze last {n}/{total} stages ({n_trainable:,} backbone params trainable)")
+        # ------------------------------------------------------------------
     def preprocess(self, img):
         """
         Resize (B, 3, H, W) ImageNet-normalized images to ViT input size.
@@ -441,7 +455,7 @@ def _val_epoch(model, img_val, spks_val, batch_size=64,
             val_loss += model.loss_function(spks_gpu[s:e], pred, l2_readout=l2_readout).item()
             pred_all[s:e] = pred
 
-    val_loss /= n_batches
+    val_loss /= n_val
 
     residual = ((spks_gpu - pred_all) ** 2).sum(0)
     centered = spks_gpu - spks_gpu.mean(0)
@@ -689,7 +703,7 @@ def finetune_vit(model, spks_train, spks_val, img_train, img_val,
         else:
             epochs_since_best += 1
 
-        if epoch % 5 == 0 or epoch + 1 == max_epochs:
+        if epoch % 1 == 0 or epoch + 1 == max_epochs:
             lr_now = optimizer.param_groups[0]['lr']
             print(f"epoch {epoch:3d} | train {train_loss:.4f} | val {val_loss:.4f} | "
                   f"varexp {varexp.mean():.4f} | lr {lr_now:.1e} | "

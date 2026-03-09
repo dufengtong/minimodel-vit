@@ -12,7 +12,7 @@ def main():
     mouse_ids      = [3]   # which mice to train
     model_name     = 'facebook/dinov3-vits16-pretrain-lvd1689m'
     token_type     = 'patch'
-    extract_layers = [5]
+    extract_layers = [6]
     max_epochs     = 200
     patience       = 5
     batch_size     = 64
@@ -36,7 +36,7 @@ def main():
             f'-J {prefix} '
             f'-o {output_save_path}/{prefix}.out '
             f'-e {output_save_path}/{prefix}.err '
-            f'"bash vit_frozen_mouse_script_a100.sh '
+            f'"bash vit_frozen_mouse_script.sh '
             f'{mouse_id} '
             f'\\"{model_name}\\" '
             f'{token_type} '

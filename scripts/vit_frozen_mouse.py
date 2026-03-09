@@ -13,7 +13,7 @@ print('device:', device)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--mouse_id',       type=int,   default=3,    help='mouse id (0-5)')
-parser.add_argument('--data_path',      type=str,   default='../notebooks/data', help='path to data directory')
+parser.add_argument('--data_path',      type=str,   default='../data', help='path to data directory')
 parser.add_argument('--weight_path',    type=str,   default='../notebooks_vit/checkpoints/vit_frozen', help='path to save model checkpoints')
 parser.add_argument('--model_name',     type=str,   default='facebook/dinov3-vits16-pretrain-lvd1689m', help='HuggingFace ViT model name')
 parser.add_argument('--hf_token',       type=str,   default='',   help='HuggingFace API token')
