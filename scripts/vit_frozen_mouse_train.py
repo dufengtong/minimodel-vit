@@ -12,7 +12,7 @@ def main():
     mouse_ids      = [3]   # which mice to train
     model_name     = 'facebook/dinov3-vits16-pretrain-lvd1689m'
     token_type     = 'patch'
-    extract_layers = [1,2,3,4,5,6,7,8,9,10,11,12]
+    extract_layers = [0]
     max_epochs     = 200
     patience       = 5
     batch_size     = 64
