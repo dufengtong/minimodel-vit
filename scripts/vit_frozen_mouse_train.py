@@ -10,9 +10,9 @@ mouse_names = ['L1_A5', 'L1_A1', 'FX9', 'FX10', 'FX8', 'FX20']
 def main():
     # --- config ---
     mouse_ids      = [3]   # which mice to train
-    model_name     = 'facebook/dinov3-vits16-pretrain-lvd1689m'
+    model_name     = 'facebook/dinov3-vitb16-pretrain-lvd1689m'
     token_type     = 'patch'
-    extract_layers = [0]
+    extract_layers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]   # which ViT layers to extract features from (e.g. [3] or [8,9,10,11])
     max_epochs     = 200
     patience       = 5
     batch_size     = 64
