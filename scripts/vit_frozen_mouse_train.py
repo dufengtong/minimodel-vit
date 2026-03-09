@@ -12,7 +12,7 @@ def main():
     mouse_ids      = [3]   # which mice to train
     model_name     = 'facebook/dinov3-vits16-pretrain-lvd1689m'
     token_type     = 'patch'
-    extract_layers = [4]
+    extract_layers = [1,2,3,4,5,6,7,8,9,10,11,12]
     max_epochs     = 200
     patience       = 5
     batch_size     = 64
@@ -20,7 +20,7 @@ def main():
     l2_readout     = 0.1
     seed           = 1
     data_path      = '../data'
-    weight_path    = '../notebooks_vit/checkpoints/vit_frozen'
+    weight_path    = '../notebooks/checkpoints/vit_frozen'
     hf_token       = os.getenv("HF_TOKEN")                                 # <-- fill in your HuggingFace token
 
     
