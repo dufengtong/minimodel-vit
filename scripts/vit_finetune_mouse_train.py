@@ -15,9 +15,9 @@ def main():
         "facebook/dinov3-vits16-pretrain-lvd1689m",
         "facebook/dinov3-vitb16-pretrain-lvd1689m",]
     token_type = "patch"
-    extract_layers_list = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]]
+    extract_layers_list = [[3], [4]]
 
-    n_blocks_to_unfreeze_all = [2]
+    n_blocks_to_unfreeze_all = [1,2,3,4]
     max_epochs = 100
     patience = 5
     batch_size = 32
