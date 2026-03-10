@@ -43,7 +43,7 @@ def main():
             )
 
             bsub_cmd = (
-                f'bsub -n 2 -q gpu_h100 -gpu "num=1" '
+                f'bsub -n 4 -q gpu_h100 -gpu "num=1" '
                 f"-J {prefix} "
                 f"-o {output_save_path}/{prefix}.out "
                 f"-e {output_save_path}/{prefix}.err "
