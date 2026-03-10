@@ -10,11 +10,11 @@ mouse_names = ["L1_A5", "L1_A1", "FX9", "FX10", "FX8", "FX20"]
 def main():
     # --- config ---
     mouse_ids = [3]
-    model_name = "facebook/dinov3-vitb16-pretrain-lvd1689m"
+    model_name = "facebook/dinov3-vits16-pretrain-lvd1689m"
     token_type = "patch"
-    extract_layers_list = [[3], [4]]
+    extract_layers_list = [[1]]
 
-    n_blocks_to_unfreeze = 3
+    n_blocks_to_unfreeze = 2
     max_epochs = 100
     patience = 5
     batch_size = 32

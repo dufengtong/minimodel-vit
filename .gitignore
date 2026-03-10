@@ -1,5 +1,6 @@
 data/
 notebooks/checkpoints/
+scripts/outputs
 
 # matlab
 *.mat
