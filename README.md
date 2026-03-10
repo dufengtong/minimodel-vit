@@ -147,7 +147,6 @@ Mouse V1 neurons have spatially localized receptive fields. The CNN fullmodel pr
 In a transformer, every patch token attends to every other patch token. Even for features extracted at early blocks (where FEVE peaks), the representation at each spatial location has already integrated global context through self-attention. The readout assumes that each spatial location (patch) is a relatively independent source of evidence for each neuron. This assumption is more natural for locally-computed CNN features than for globally-mixed transformer tokens. 
 
 
-
 ### Block-ordering of performance
 
 The consistent FEVE peak at blocks 3–4 (out of 12) for both ViT-S and ViT-B, across both frozen and fine-tuned conditions, is a robust finding. It mirrors results from neural predictivity studies of ImageNet-pretrained ViTs in primate V1/V2: mid-early layers best predict simple-cell responses, while deeper layers are better aligned with higher visual areas (V4, IT). 

@@ -176,7 +176,7 @@ class ViTCore(nn.Module):
         if hasattr(self.backbone, "embeddings"):
             stages.append(self.backbone.embeddings)
 
-        encoder_layers = list(self.backbone.layer)
+        encoder_layers = list(self.backbone.layer[:self.extract_layers[-1] + 1] if self.extract_layers is not None else self.backbone.layer)
         stages.extend(encoder_layers)
         print(f"Total stages (including embeddings): {len(stages)}")
 
