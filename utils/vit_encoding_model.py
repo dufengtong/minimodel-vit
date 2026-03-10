@@ -94,8 +94,7 @@ class ViTCore(nn.Module):
       2. Run ViT → extract token features.
          - 'patch': patch tokens → reshape to (B, D, H_p, W_p).
          - 'cls':   CLS token   → reshape to (B, D, 1, 1).
-      3. Optional 1x1 conv projection: D → proj_dim.
-      4. Optional bilinear upsample to out_spatial_size (patch only).
+      3. Optional bilinear upsample to out_spatial_size (patch only).
 
     Args:
         model_name: HuggingFace model ID.
@@ -110,8 +109,6 @@ class ViTCore(nn.Module):
             None = last layer only.
         token_type: 'patch' (spatial readout) or 'cls' (global linear readout).
         freeze: freeze all ViT parameters.
-        use_channel_proj: 1x1 Conv-BN-ReLU to project to proj_dim channels.
-        proj_dim: output channels after projection.
         hf_token: HuggingFace token for private/gated models.
     """
 
@@ -120,7 +117,6 @@ class ViTCore(nn.Module):
                  out_spatial_size=None,
                  extract_layers=None,
                  freeze=True,
-                 use_channel_proj=True, proj_dim=64,
                  hf_token=""):
         super().__init__()
 
@@ -143,21 +139,11 @@ class ViTCore(nn.Module):
         self.H_patches = vit_input_size[0] // self.patch_size
         self.W_patches = vit_input_size[1] // self.patch_size
 
-        # Raw channel count before projection
+        # Raw channel count 
         n_layers     = len(extract_layers) if extract_layers is not None else 1
         raw_channels = self.embed_dim * n_layers
 
-        # Optional 1x1 conv projection (works for both patch and CLS via spatial 1x1)
-        self.use_channel_proj = use_channel_proj
-        if use_channel_proj:
-            self.channel_proj = nn.Sequential(
-                nn.Conv2d(raw_channels, proj_dim, 1, bias=False),
-                nn.BatchNorm2d(proj_dim),
-                nn.ReLU(inplace=True),
-            )
-            self.out_channels = proj_dim
-        else:
-            self.out_channels = raw_channels
+        self.out_channels = raw_channels
 
         if freeze:
             self._freeze_backbone()
@@ -263,9 +249,6 @@ class ViTCore(nn.Module):
         else:
             features = self._extract_features(pixel_values)
 
-        if self.use_channel_proj:
-            features = self.channel_proj(features)
-
         return features
 
 
@@ -316,7 +299,6 @@ def build_vit_encoder(n_neurons, model_name,
                       vit_input_size=(112, 224),
                       out_spatial_size=(16, 32),
                       extract_layers=None,
-                      use_channel_proj=True, proj_dim=64,
                       freeze_backbone=True,
                       poisson=True, Wc_coef=0.01,
                       hf_token="",
@@ -336,9 +318,7 @@ def build_vit_encoder(n_neurons, model_name,
             Ignored for token_type='cls'.
         extract_layers: which transformer blocks to use. None = last only.
         token_type: 'patch' → spatial readout; 'cls' → effective linear readout (Ly=Lx=1).
-        use_channel_proj: 1x1 Conv to project embed_dim → proj_dim.
-        proj_dim: channels after projection.
-        freeze_backbone: freeze ViT (train readout + proj only).
+        freeze_backbone: freeze ViT (train readout only).
         poisson: Poisson loss (True) or MSE (False).
         Wc_coef: readout Wc init scale.
         hf_token: HuggingFace token.
@@ -353,8 +333,6 @@ def build_vit_encoder(n_neurons, model_name,
         out_spatial_size=out_spatial_size,
         extract_layers=extract_layers,
         freeze=freeze_backbone,
-        use_channel_proj=use_channel_proj,
-        proj_dim=proj_dim,
         hf_token=hf_token,
     )
 
@@ -484,7 +462,7 @@ def train_readout(model, spks_train, spks_val, img_train, img_val,
                   patience=5,
                   device=torch.device('cuda')):
     """
-    Train readout (+ channel projection) with frozen ViT backbone.
+    Train readout with frozen ViT backbone.
 
     Uses ReduceLROnPlateau + patience-based early stopping.
 
@@ -509,10 +487,6 @@ def train_readout(model, spks_train, spks_val, img_train, img_val,
         {'params': [model.readout.Wc],                   'weight_decay': l2_readout},
         {'params': [model.readout.bias],                  'weight_decay': 0.0},
     ]
-    if model.core.use_channel_proj:
-        param_groups.append(
-            {'params': list(model.core.channel_proj.parameters()), 'weight_decay': 0.1}
-        )
 
     optimizer = torch.optim.AdamW(param_groups, lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -634,20 +608,17 @@ def finetune_vit(model, spks_train, spks_val, img_train, img_val,
     model = model.to(device)
     model.core.unfreeze_last_n_blocks(n_blocks_to_unfreeze)
 
-    backbone_params, proj_params, readout_params = [], [], []
+    backbone_params, readout_params = [], []
     for name, param in model.named_parameters():
         if not param.requires_grad:
             continue
         if 'readout' in name:
             readout_params.append(param)
-        elif 'channel_proj' in name:
-            proj_params.append(param)
         else:
             backbone_params.append(param)
 
     optimizer = torch.optim.AdamW([
         {'params': backbone_params, 'lr': backbone_lr,    'weight_decay': 1e-2},
-        {'params': proj_params,     'lr': backbone_lr * 5,'weight_decay': 1e-2},
         {'params': readout_params,  'lr': readout_lr,     'weight_decay': 1e-5},
     ])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -656,7 +627,6 @@ def finetune_vit(model, spks_train, spks_val, img_train, img_val,
 
     print(f"Fine-tuning | max_epochs={max_epochs}, patience={patience}")
     print(f"  Backbone: {sum(p.numel() for p in backbone_params):,} @ lr={backbone_lr:.1e}")
-    print(f"  Proj:     {sum(p.numel() for p in proj_params):,} @ lr={backbone_lr*5:.1e}")
     print(f"  Readout:  {sum(p.numel() for p in readout_params):,} @ lr={readout_lr:.1e}")
 
     n_train           = img_train.shape[0]
