@@ -14,7 +14,7 @@ def main():
     token_type = "patch"
     extract_layers_list = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]]
 
-    n_blocks_to_unfreeze = 2
+    n_blocks_to_unfreeze_all = 2
     max_epochs = 100
     patience = 5
     batch_size = 32
@@ -37,37 +37,38 @@ def main():
             extract_layers_str = " ".join(str(l) for l in extract_layers)
             layer_tag = "-".join(str(l) for l in extract_layers)
 
-            prefix = (
-                f"vit_finetune_{mouse_names[mouse_id]}_l{layer_tag}_"
-                f"ft{n_blocks_to_unfreeze}b_seed{seed}"
-            )
+            for n_blocks_to_unfreeze in n_blocks_to_unfreeze_all:
+                prefix = (
+                    f"vit_finetune_{mouse_names[mouse_id]}_l{layer_tag}_"
+                    f"ft{n_blocks_to_unfreeze}b_seed{seed}"
+                )
 
-            bsub_cmd = (
-                f'bsub -n 4 -q gpu_h100 -gpu "num=1" '
-                f"-J {prefix} "
-                f"-o {output_save_path}/{prefix}.out "
-                f"-e {output_save_path}/{prefix}.err "
-                f'"bash vit_finetune_mouse_script.sh '
-                f"{mouse_id} "
-                f'\\"{model_name}\\" '
-                f"{token_type} "
-                f'\\"{extract_layers_str}\\" '
-                f"{n_blocks_to_unfreeze} "
-                f"{max_epochs} "
-                f"{patience} "
-                f"{batch_size} "
-                f"{backbone_lr} "
-                f"{readout_lr} "
-                f"{l2_readout} "
-                f"{seed} "
-                f'\\"{data_path}\\" '
-                f'\\"{frozen_path}\\" '
-                f'\\"{ft_path}\\" '
-                f'\\"{hf_token}\\"'
-                f'"'
-            )
-            print(bsub_cmd)
-            os.system(bsub_cmd)
+                bsub_cmd = (
+                    f'bsub -n 4 -q gpu_h100 -gpu "num=1" '
+                    f"-J {prefix} "
+                    f"-o {output_save_path}/{prefix}.out "
+                    f"-e {output_save_path}/{prefix}.err "
+                    f'"bash vit_finetune_mouse_script.sh '
+                    f"{mouse_id} "
+                    f'\\"{model_name}\\" '
+                    f"{token_type} "
+                    f'\\"{extract_layers_str}\\" '
+                    f"{n_blocks_to_unfreeze} "
+                    f"{max_epochs} "
+                    f"{patience} "
+                    f"{batch_size} "
+                    f"{backbone_lr} "
+                    f"{readout_lr} "
+                    f"{l2_readout} "
+                    f"{seed} "
+                    f'\\"{data_path}\\" '
+                    f'\\"{frozen_path}\\" '
+                    f'\\"{ft_path}\\" '
+                    f'\\"{hf_token}\\"'
+                    f'"'
+                )
+                print(bsub_cmd)
+                os.system(bsub_cmd)
 
 
 if __name__ == "__main__":
