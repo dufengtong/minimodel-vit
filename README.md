@@ -84,37 +84,37 @@ All results are on mouse **FX10** (4,792 neurons, 500 held-out test images × 10
 
 ### Figure 1a — FEVE by block (frozen ViT-S/16)
 
-<div align="center"><img src="figures/fig1a_frozen_feve_vs_block.png" width="60%"></div>
+<div align="center"><img src="figures/fig1a_frozen_feve_vs_block.png" width="80%"></div>
 
 Frozen ViT-S/16 features extracted from each transformer block. FEVE peaks at **blocks 3–4 (~0.32)**, indicating that low-to-mid-level representations are most predictive of V1 responses. Later blocks encode higher-level semantic content that is less relevant to V1..
 
 ### Figure 1b — Frozen vs. Fine-tuned ViT-S/16
 
-<div align="center"><img src="figures/fig1b_frozen_vs_ft2_feve_vs_block.png" width="60%"></div>
+<div align="center"><img src="figures/fig1b_frozen_vs_ft2_feve_vs_block.png" width="80%"></div>
 
 Fine-tuning the last 2 blocks consistently improves FEVE across different ViT core depths, with the largest gains in early-to-mid blocks. The fine-tuned peak is at **block 3 (~0.39)**, up from ~0.32 frozen. The block-ordering of performance is preserved, confirming that early-block features are still most predictive after fine-tuning. W
 
 ### Figure 2 — FEVE distribution at best blocks (ViT-S/16)
 
-<div align="center"><img src="figures/fig2_best_blocks_comparison.png" width="60%"></div>
+<div align="center"><img src="figures/fig2_best_blocks_comparison.png" width="80%"></div>
 
 Violin plots of per-neuron FEVE at blocks 3 and 4 across three conditions: Frozen, FT (2 blocks), and FT (3 blocks). Fine-tuning (either 2 or 3 blocks) raises the **mean FEVE from ~0.34 (frozen) to ~0.40 (fine-tuned)** at the best block. Unfreezing 3 blocks gives no clear further advantage over 2 blocks.
 
 ### Figure 3 — ViT-S/16 vs. ViT-B/16 (frozen)
 
-<div align="center"><img src="figures/fig3_vits_vs_vitb_frozen_feve_vs_block.png" width="60%"></div>
+<div align="center"><img src="figures/fig3_vits_vs_vitb_frozen_feve_vs_block.png" width="80%"></div>
 
 Comparing frozen ViT-Small (384-dim) and ViT-Base (768-dim). ViT-B/16 outperforms ViT-S/16 in early-to-mid blocks, peaking at **block 3 (~0.38 vs. ~0.32)**. Both models degrade sharply at later blocks.
 
 ### Figure 4 — All four conditions (frozen & fine-tuned, ViT-S and ViT-B)
 
-<div align="center"><img src="figures/fig4_vits_vs_vitb_frozen_and_ft_feve_vs_block.png" width="60%"></div>
+<div align="center"><img src="figures/fig4_vits_vs_vitb_frozen_and_ft_feve_vs_block.png" width="80%"></div>
 
 Full comparison across both model sizes and both training regimes. All four curves peak around blocks 3–4. ViT-B/16 fine-tuned (2 blocks) achieves the highest FEVE at block 3 (~0.41). Fine-tuning narrows the gap between ViT-S and ViT-B. Later blocks (9–11) show divergent behavior after fine-tuning, likely due to overfitting with less-predictive features.
 
 ### Figure 5 — Best-block FEVE distribution (ViT-S vs. ViT-B)
 
-<div align="center"><img src="figures/fig5_best_block_vits_vs_vitb.png" width="60%"></div>
+<div align="center"><img src="figures/fig5_best_block_vits_vs_vitb.png" width="80%"></div>
 
 Per-neuron FEVE at the best block for each model. Fine-tuning improves both architectures; ViT-B/16 fine-tuned achieves the highest mean (~0.42).
 
@@ -170,7 +170,7 @@ torchvision
 numpy
 scipy
 opencv-python
-transformers        # HuggingFace, for DINOv3 weights
+transformers    
 tqdm
-matplotlib          # notebooks only
+matplotlib          
 ```
