@@ -1,11 +1,11 @@
 # minimodel-vit
 
-Encoding models for mouse primary visual cortex (V1) using a Vision Transformer (ViT) backbone with the [minimodel](https://github.com/MouseLand/minimodel) readout. The project asks a simple question: **can we directly plug frozen (or lightly fine-tuned) DINOv3 patch features into the minimodel readout and match the performance of the task-optimized CNN core?**
+Encoding models for mouse primary visual cortex (V1) using a Vision Transformer (ViT) backbone with the [minimodel](https://github.com/MouseLand/minimodel) readout. The project asks a simple question: **can we directly plug frozen (or lightly fine-tuned) DINOv3 patch features with the minimodel readout and match the performance of the task-optimized CNN core?**
 
 Two training regimes are compared:
 
-1. **Frozen backbone** — the ViT is used purely as a feature extractor; only the linear readout is trained.
-2. **Fine-tuned backbone** — the last *N* transformer blocks are unfrozen and jointly optimized with the readout at a lower learning rate (experiments: N = 1, 2, 3, 4).
+1. **Frozen backbone** — the ViT is used purely as a feature extractor; only the readout is trained.
+2. **Fine-tuned backbone** — the last *N* transformer blocks are unfrozen and jointly optimized with the readout at a lower learning rate.
 
 Results are compared against the CNN fullmodel (2-layer depth-separable convolutional core + readout) to assess what large-scale visual pretraining adds to neural predictivity.
 
@@ -39,7 +39,7 @@ Output: `(N, 3, 64, 128)` tensors fed to the ViT.
 | Spatial output grid | 4 × 8 (from 64 × 128 input) | 4 × 8 |
 | Register tokens | 4 (DINOv3) | 4 |
 
-Features can be extracted from any of the 12 transformer blocks, giving 12 possible readout points in total.
+Features can be extracted from any of the 12 transformer blocks, giving 12 possible readouts in total.
 
 ### Architecture: how ViT and readout are concatenated
 
@@ -59,7 +59,7 @@ patch features  (N, D, 4, 8)         ← D = 384 (ViT-S) or 768 (ViT-B)
 predicted firing rates  (N, n_neurons)
 ```
 
-The key design choice is that **each 16×16 patch token is treated as one spatial location** in a 4×8 grid. The readout from the minimodel learns a per-neuron separable weight map over this grid and a linear combination of feature channels. This is identical to the readout applied to the CNN core feature maps, making the comparison between ViT and CNN fair at the readout level.
+The key design choice is that **each 16×16 patch token is treated as one spatial location** in a 4×8 grid. The readout from the minimodel learns a per-neuron separable weight map over this grid and a linear combination of feature channels. This is identical to the readout applied to the CNN core feature maps.
 
 ### Training protocol
 
@@ -70,7 +70,7 @@ The key design choice is that **each 16×16 patch token is treated as one spatia
 - Early stopping when LR reaches `min_lr=1e-5`.
 
 **Fine-tuned backbone:**
-- Initialized from the frozen-backbone checkpoint (warm-started readout).
+- Initialized from the frozen-backbone checkpoint.
 - Last *N* transformer blocks unfrozen (experiments: N = 1, 2, 3, 4).
 - Three learning-rate groups: backbone `lr=1e-5`, readout `lr=1e-3`.
 - LR schedule: CosineAnnealingLR over max 100 epochs.
@@ -80,65 +80,65 @@ The key design choice is that **each 16×16 patch token is treated as one spatia
 
 ## Results
 
-All results are on mouse **FX10** (4,792 neurons, 500 held-out test images × 10 repeats). Valid neurons are defined as FEV > 0.15 (approximately 3,040 / 4,792 neurons pass). FEVE (fraction of explainable variance explained) is averaged over valid neurons.
+All results are on mouse **FX10** (4,792 neurons, 500 held-out test images × 10 repeats). Valid neurons are defined as FEV > 0.15 (approximately 3,040 / 4,792 neurons). FEVE (fraction of explainable variance explained) is averaged over valid neurons.
 
 ### Figure 1a — FEVE by block (frozen ViT-S/16)
 
 <div align="center"><img src="figures/fig1a_frozen_feve_vs_block.png" width="80%"></div>
 
-Frozen ViT-S/16 features extracted from each transformer block. FEVE peaks at **block 4 (~0.32)**, indicating that low-to-mid-level representations are most predictive of V1 responses. Performance declines steadily in later blocks as representations become more semantic.
+Frozen ViT-S/16 features extracted from each transformer block. FEVE peaks at **block 5 (~0.32)**, indicating that low-to-mid-level representations are most predictive of V1 responses. Performance declines steadily in later blocks as representations become more semantic.
 
 ### Figure 1b — Frozen vs. Fine-tuned ViT-S/16
 
 <div align="center"><img src="figures/fig1b_frozen_vs_ft2_feve_vs_block.png" width="80%"></div>
 
-Fine-tuning the last 2 blocks consistently improves FEVE across all ViT depths. The fine-tuned peak rises to **block 3–4 (~0.52)**, up from ~0.32 frozen. The block-ordering of performance is preserved after fine-tuning.
+Fine-tuning the last 2 blocks consistently improves FEVE across all ViT depths. The fine-tuned peak rises to **block 4–5 (~0.52)**, up from ~0.32 frozen. The block-ordering of performance is preserved after fine-tuning.
 
 ### Figure 2 — FEVE distribution at best blocks (ViT-S/16)
 
 <div align="center"><img src="figures/fig2_best_blocks_comparison.png" width="80%"></div>
 
-Violin plots of per-neuron FEVE at blocks 3 and 4 across five conditions: Frozen, FT-1, FT-2, FT-3, and FT-4 blocks. Fine-tuning raises the mean FEVE progressively with each additional unfrozen block, from **~0.32 (frozen)** to **~0.54 (FT-4 blocks)**. 
+Violin plots of mean FEVE at blocks 4 and 5 across five conditions: Frozen, FT-1, FT-2, FT-3, and FT-4 blocks. Fine-tuning raises the mean FEVE progressively with each additional unfrozen block, from **~0.32 (frozen)** to **~0.54 (FT-4 blocks)**. 
 
 ### Figure 2b — Best-block FEVE distribution (ViT-S vs. ViT-B, all fine-tuning levels)
 
 <div align="center"><img src="figures/fig2b_vits_vs_vitb_best_blocks.png" width="100%"></div>
 
-Side-by-side comparison of per-neuron FEVE at the best block for ViT-S/16 and ViT-B/16 across all fine-tuning conditions. In the frozen setting, ViT-B/16 outperforms ViT-S/16 (0.38 vs. 0.32). After fine-tuning 4 blocks, **ViT-S/16 slightly surpasses ViT-B/16** (0.5449 vs. 0.5309), suggesting the smaller model adapts more efficiently.
+Comparison of mean FEVE at the best block for ViT-S/16 and ViT-B/16 across all fine-tuning conditions. In the frozen setting, ViT-B/16 outperforms ViT-S/16 (0.38 vs. 0.32). After fine-tuning 4 blocks, **ViT-S/16 slightly surpasses ViT-B/16** (0.5449 vs. 0.5309), suggesting the smaller model adapts more efficiently with our data.
 
 ### Figure 3 — ViT-S/16 vs. ViT-B/16 (frozen)
 
 <div align="center"><img src="figures/fig3_vits_vs_vitb_frozen_feve_vs_block.png" width="80%"></div>
 
-Comparing frozen ViT-Small (384-dim) and ViT-Base (768-dim). ViT-B/16 outperforms ViT-S/16 in early-to-mid blocks, peaking at **block 3 (~0.38 vs. ~0.32)**. Both models degrade sharply at later blocks.
+Comparing frozen ViT-Small and ViT-Base. ViT-B/16 outperforms ViT-S/16 in early-to-mid blocks, peaking at **block 4 (~0.38 vs. ~0.32)**. 
 
 ### Figure 4 — All conditions (frozen & fine-tuned, ViT-S and ViT-B)
 
 <div align="center"><img src="figures/fig4_vits_vs_vitb_frozen_and_ft_feve_vs_block.png" width="80%"></div>
 
-Full comparison across both model sizes and both training regimes. All curves peak around blocks 3–4. Fine-tuning narrows the gap between ViT-S and ViT-B. Later blocks (9–11) show divergent behavior after fine-tuning, likely due to overfitting with less-predictive features.
+Comparison across both model sizes and training regimes. All curves peak around blocks 4–5. Fine-tuning narrows the gap between ViT-S and ViT-B. Later blocks show divergent behavior after fine-tuning, likely due to overfitting with less-predictive features.
 
 ### Figure 5 — Best-block FEVE (ViT-S vs. ViT-B, frozen and FT-2)
 
 <div align="center"><img src="figures/fig5_best_block_vits_vs_vitb.png" width="80%"></div>
 
-Mean FEVE at the best block, comparing frozen and FT-2-block conditions for both architectures. Fine-tuning 2 blocks roughly doubles the frozen-to-FT gain relative to the old runs, reaching ~0.51 for both ViT-S and ViT-B.
+Mean FEVE at the best block, comparing frozen and FT-4-block conditions for both architectures. Fine-tuning 4 blocks improves the performance relative to the old runs, reaching ~0.54 for both ViT-S and ViT-B.
 
 ### Summary table
 
 | Model | Best block | FEVE (mean, valid neurons) |
 |---|---|---|
 | CNN fullmodel (2-layer depth-sep. conv, 16/320 filters) | — | **0.6654** |
-| ViT-S/16 frozen | 4 | 0.3234 |
-| ViT-S/16 FT-1 block | 3 | 0.4896 |
-| ViT-S/16 FT-2 blocks | 3 | 0.5168 |
-| ViT-S/16 FT-3 blocks | 3 | 0.5255 |
-| ViT-S/16 FT-4 blocks | 4 | **0.5449** (best ViT-S) |
-| ViT-B/16 frozen | 3 | 0.3787 |
-| ViT-B/16 FT-1 block | 3 | 0.4712 |
-| ViT-B/16 FT-2 blocks | 3 | 0.5112 |
-| ViT-B/16 FT-3 blocks | 3 | 0.5293 |
-| ViT-B/16 FT-4 blocks | 3 | 0.5309 |
+| ViT-S/16 frozen | 5 | 0.3234 |
+| ViT-S/16 FT-1 block | 4 | 0.4896 |
+| ViT-S/16 FT-2 blocks | 4 | 0.5168 |
+| ViT-S/16 FT-3 blocks | 4 | 0.5255 |
+| ViT-S/16 FT-4 blocks | 5 | **0.5449** (best ViT-S) |
+| ViT-B/16 frozen | 4 | 0.3787 |
+| ViT-B/16 FT-1 block | 4 | 0.4712 |
+| ViT-B/16 FT-2 blocks | 4 | 0.5112 |
+| ViT-B/16 FT-3 blocks | 4 | 0.5293 |
+| ViT-B/16 FT-4 blocks | 4 | 0.5309 |
 
 The best ViT model (ViT-S/16 FT-4 blocks) achieves **0.5449 FEVE**, compared to **0.6654 FEVE** for the CNN fullmodel.
 
@@ -160,7 +160,7 @@ In a transformer, every patch token attends to every other patch token. Even at 
 
 ### Block-ordering of performance
 
-The consistent FEVE peak at blocks 3–4 (out of 12) for both ViT-S and ViT-B, across all fine-tuning levels, is a robust finding. It mirrors results from neural predictivity studies of ImageNet-pretrained ViTs in primate: mid-early layers best predict V1/V2 responses, while deeper layers are better aligned with higher visual areas (V4, IT).
+The consistent FEVE peak at blocks 4–5 (out of 12) for both ViT-S and ViT-B, across all fine-tuning levels, is a robust finding. It mirrors results from neural predictivity studies of ImageNet-pretrained ViTs in primate: mid-early layers best predict V1/V2 responses, while deeper layers are better aligned with higher visual areas (V4, IT).
 
 ### Fine-tuning
 
