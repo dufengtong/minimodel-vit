@@ -50,7 +50,7 @@ def _model_shortname(model_name):
     return '_'.join(parts[:2])
 
 
-def make_model_name(mouse_name, exp_date, model_name, token_type, extract_layers):
+def make_model_name(mouse_name, exp_date, model_name, token_type, extract_layers, downsample_factor=None):
     """
     Build a descriptive checkpoint filename.
 
@@ -75,6 +75,11 @@ def make_model_name(mouse_name, exp_date, model_name, token_type, extract_layers
         layer_str = f'l{extract_layers[0]}'
     else:
         layer_str = f'l{extract_layers[0]}-{extract_layers[-1]}'
+    if downsample_factor is not None:
+        if downsample_factor < 1.0:
+            layer_str += f'_upsample{int(1/downsample_factor)}x'
+        elif downsample_factor > 1.0:
+            layer_str += f'_downsample{int(downsample_factor)}x'
     return f'{mouse_name}_{exp_date}_{short}_{token_type}_{layer_str}.pt'
 
 
@@ -366,7 +371,7 @@ def build_vit_encoder(n_neurons, model_name,
 # 4. Image preprocessing helper
 # ============================================================
 
-def preprocess_images(img_np, batch_size=2000):
+def preprocess_images(img_np, batch_size=2000, downsample_factor=1):
     """
     Preprocess raw 66x264 grayscale images to DINOv3-ready (N, 3, 32, 64) tensors.
 
@@ -386,12 +391,12 @@ def preprocess_images(img_np, batch_size=2000):
         numpy array (N, 3, 32, 64) float32, ready to feed directly into ViTCore.
     """
     n   = img_np.shape[0]
-    out = np.zeros((n, 64, 128), dtype=np.float32)
+    out = np.zeros((n, int(64 / downsample_factor), int(128/downsample_factor)), dtype=np.float32)
 
     for i in range(0, n, batch_size):
         batch = torch.from_numpy(img_np[i:i + batch_size]).unsqueeze(1).float()
-        batch = F.interpolate(batch, size=(64, 256), mode='bilinear', align_corners=False)
-        batch = batch[:, :, :, :128]                      # → (B, 1, 64, 128)
+        batch = F.interpolate(batch, size=(int(64 / downsample_factor), int(256 / downsample_factor)), mode='bilinear', align_corners=False)
+        batch = batch[:, :, :, :int(128 / downsample_factor)]                      # → (B, 1, 64, 128)
         # batch = F.interpolate(batch, size=(32, 64),  mode='bilinear', align_corners=False)
         out[i:i + batch_size] = batch.squeeze(1).numpy()
 
