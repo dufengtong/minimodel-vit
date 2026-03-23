@@ -131,46 +131,41 @@ Mean FEVE at the best block, comparing frozen and FT-4-block conditions for both
 | CNN fullmodel (2-layer depth-sep. conv, 16/320 filters) | — | **0.6654** |
 | ViT-S/16 frozen | 5 | 0.3234 |
 | ViT-S/16 FT-1 block | 4 | 0.4896 |
-| ViT-S/16 FT-2 blocks | 4 | 0.5168 |
-| ViT-S/16 FT-3 blocks | 4 | 0.5255 |
-| ViT-S/16 FT-4 blocks | 5 | **0.5449** (best ViT-S) |
+| ViT-S/16 FT-4 blocks | 5 | **0.5449**  |
 | ViT-B/16 frozen | 4 | 0.3787 |
 | ViT-B/16 FT-1 block | 4 | 0.4712 |
-| ViT-B/16 FT-2 blocks | 4 | 0.5112 |
-| ViT-B/16 FT-3 blocks | 4 | 0.5293 |
 | ViT-B/16 FT-4 blocks | 4 | 0.5309 |
+| ViT-B/16 FT-4 blocks (upsample 2x) | 4 | **0.6352** (best) |
 
-The best ViT model (ViT-S/16 FT-4 blocks) achieves **0.5449 FEVE**, compared to **0.6654 FEVE** for the CNN fullmodel.
+
+With 2× input upsampling, the best ViT model (ViT-B/16 FT-4 blocks) reaches **0.6352 FEVE**, closing most of the gap to the CNN fullmodel at **0.6654 FEVE** — within ~0.03 of the task-optimized baseline.
 
 ---
 
 ## Discussion
 
-### Why does the CNN model still outperform the ViT?
+### Spatial resolution is the key bottleneck
 
-Despite the large improvement from fine-tuning (0.32 → 0.54), the CNN fullmodel (FEVE 0.6654) retains a ~0.12 FEVE advantage. Several factors likely contribute:
+The single largest performance gain in this project came not from architecture choice or fine-tuning depth, but from **input upsampling**. Upsampling the stimulus from 64×128 to 128×256 before feeding the ViT doubles the spatial resolution of the patch grid (from 4×8 to 8×16), and pushes FEVE from ~0.53 to **0.6352** — within 0.03 of the CNN fullmodel.
 
-#### Spatial resolution and the patch-grid readout
+This result directly implicates spatial precision as the primary bottleneck. Mouse V1 neurons have small, spatially localized receptive fields. When the ViT operates on a coarse 4×8 grid of 16×16-pixel patches, the readout has only 16-pixel spatial granularity — insufficient to resolve fine RF structure. The CNN fullmodel, processing images at full resolution through convolutional layers with dense spatial feature maps, naturally avoids this constraint. Doubling the resolution effectively bridges most of that gap.
 
-Mouse V1 neurons have spatially localized receptive fields. The CNN fullmodel processes the image at full spatial resolution through convolutional layers, preserving fine-grained spatial structure. In contrast, the ViT backbone divides the 64×128 input into a coarse **4×8 grid of 16×16 patches**. By treating each patch token as a single spatial location in the readout, we limit spatial precision to 16-pixel granularity. If a neuron's RF is smaller than or misaligned with a patch boundary, the spatial weight map cannot capture it accurately. The CNN, with its strided convolutions and dense spatial feature maps, is better suited to this regime.
+### Self-attention mixes spatial information
 
-#### Self-attention mixes spatial information
+Even at the best-performing blocks (4–5 out of 12), ViT patch tokens have already exchanged global context through self-attention. This is fundamentally at odds with V1 neurons, which integrate signals from spatially localized regions. Fine-tuning partially mitigates this by adapting the attention patterns toward more spatially localized representations, but some mixing is inherent to the transformer architecture.
 
-In a transformer, every patch token attends to every other patch token. Even at early blocks (where FEVE peaks), each spatial location has already integrated global context through self-attention. This contrasts with V1 neurons, which pool from localized spatial regions.
+### Block depth: mid-early layers best predict V1
 
-### Block-ordering of performance
-
-The consistent FEVE peak at blocks 4–5 (out of 12) for both ViT-S and ViT-B, across all fine-tuning levels, is a robust finding. It mirrors results from neural predictivity studies of ImageNet-pretrained ViTs in primate: mid-early layers best predict V1/V2 responses, while deeper layers are better aligned with higher visual areas (V4, IT).
+FEVE consistently peaks at blocks 4–5 for both ViT-S and ViT-B, across all training regimes. This mirrors findings from neural predictivity studies in primates: mid-early ViT layers align best with V1/V2, while later layers better predict higher visual areas (V4, IT). The result suggests that the organizational hierarchy of DINOv3 representations partially maps onto the mouse visual hierarchy.
 
 ### Fine-tuning
 
-Fine-tuning consistently improves FEVE, with gains that accumulate up to 4 unfrozen blocks. The largest single jump is frozen → FT-1 (~0.17 FEVE for ViT-S/16 at block 3), with diminishing returns at FT-3 and FT-4. This suggests that the pretrained representations are substantially adaptable, but additional unfrozen blocks provide only marginal benefit beyond the first few.
+Fine-tuning consistently improves FEVE, with the largest single jump at frozen → FT-1 (~0.16–0.17 FEVE). Returns diminish at FT-3 and FT-4, suggesting that most of the representational adaptation occurs in the first unfrozen block. The pretrained DINOv3 features are substantially adaptable to neural prediction, but the backbone does not need deep unfreezing to benefit.
 
 ### ViT-S vs. ViT-B
 
-ViT-B/16 (86 M params) outperforms ViT-S/16 (21 M params) in the frozen setting at early-to-mid blocks (0.38 vs. 0.32), but the gap reverses slightly after fine-tuning 4 blocks (ViT-S 0.5449 vs. ViT-B 0.5309). This suggests that ViT-S may adapt more efficiently when fine-tuned on relatively small neural datasets comparing to its large-scale pretraining dataset (LVD-142M).
+ViT-B/16 (86 M params) outperforms ViT-S/16 (21 M params) in the frozen regime (0.38 vs. 0.32), consistent with the larger model having more expressive general-purpose features. After fine-tuning 4 blocks without upsampling, the gap narrows and reverses slightly (ViT-S 0.5449 vs. ViT-B 0.5309), possibly because the smaller model overfits less on our relatively small neural dataset. 
 
----
 
 ## Requirements
 
